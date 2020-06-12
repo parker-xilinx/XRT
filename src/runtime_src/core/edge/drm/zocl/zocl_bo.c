@@ -699,9 +699,19 @@ int zocl_pwrite_bo_ioctl(struct drm_device *dev, void *data,
 	}
 
 	kaddr = drm_gem_cma_prime_vmap(gem_obj);
-	kaddr += args->offset;
-
-	ret = copy_from_user(kaddr, user_data, args->size);
+    
+    if (kaddr) {
+        kaddr += args->offset;
+        ret = copy_from_user(kaddr, user_data, args->size);
+    }
+    else {
+        struct drm_zocl_bo* bo = to_zocl_bo(gem_obj);
+        uint64_t paddr = (uint64_t)bo->mm_node->start;
+        
+        kaddr = phys_to_virt(paddr);
+        ret = copy_from_user(kaddr, user_data, args->size);
+    }
+    
 out:
 	ZOCL_DRM_GEM_OBJECT_PUT_UNLOCKED(gem_obj);
 
@@ -740,9 +750,18 @@ int zocl_pread_bo_ioctl(struct drm_device *dev, void *data,
 	}
 
 	kaddr = drm_gem_cma_prime_vmap(gem_obj);
-	kaddr += args->offset;
 
-	ret = copy_to_user(user_data, kaddr, args->size);
+	if (kaddr) {
+        kaddr += args->offset;
+        ret = copy_to_user(user_data, kaddr, args->size);
+    }
+    else {
+        struct drm_zocl_bo* bo = to_zocl_bo(gem_obj);
+        uint64_t paddr = (uint64_t)bo->mm_node->start;
+        
+        kaddr = phys_to_virt(paddr);
+        ret = copy_to_user(user_data, kaddr, args->size);
+    }
 
 out:
 	ZOCL_DRM_GEM_OBJECT_PUT_UNLOCKED(gem_obj);
